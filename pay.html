@@ -1,0 +1,23 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pay Fees</title>
+<style>
+:root{--bg:#f4f6f5;--card:#fff;--tx:#17211e;--mu:#667570;--bd:#dbe3e0;--ac:#0f6b57;--acx:#fff}
+@media(prefers-color-scheme:dark){:root{--bg:#101614;--card:#18211e;--tx:#e6eeeb;--mu:#93a39d;--bd:#2a3833;--ac:#3fbf9f;--acx:#07130f}}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx)}
+main{max-width:420px;margin:32px auto;padding:0 16px}.c{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:24px;text-align:center}
+h1{font-size:18px;margin:0}p{margin:6px 0;color:var(--mu)}.amt{font-size:40px;font-weight:700;margin:14px 0;color:var(--tx)}
+a.pay{display:block;background:var(--ac);color:var(--acx);text-decoration:none;font-weight:700;padding:14px;border-radius:10px;margin-top:18px}
+button{margin-top:12px;width:100%;padding:12px;border:1px solid var(--bd);background:transparent;color:var(--tx);border-radius:10px;font:inherit;cursor:pointer}
+small{display:block;margin-top:14px;color:var(--mu)}
+</style></head><body><main><div class="c">
+<h1 id="pn">Fee payment</h1><p id="tn"></p><div class="amt" id="am"></div>
+<a class="pay" id="go" href="#">Pay now with any UPI app</a>
+<button id="cp">Copy UPI ID</button>
+<small>This opens Google Pay, PhonePe, Paytm or another UPI app on your phone. Open this page on a phone. After paying, please keep the payment screenshot.</small>
+</div></main><script>
+var q=new URLSearchParams(location.search),pa=q.get('pa')||'',pn=q.get('pn')||'Academy',am=q.get('am')||'',tn=q.get('tn')||'Fee payment';
+document.getElementById('pn').textContent=pn;document.getElementById('tn').textContent=tn;
+if(!pa){document.getElementById('am').textContent='Invalid payment link';document.getElementById('go').style.display='none';document.getElementById('cp').style.display='none'}
+else{if(am)document.getElementById('am').textContent='₹'+Number(am).toLocaleString('en-IN');
+document.getElementById('go').href='upi://pay?pa='+pa+'&pn='+encodeURIComponent(pn)+(am?'&am='+encodeURIComponent(am):'')+'&cu=INR&tn='+encodeURIComponent(tn);
+document.getElementById('cp').onclick=function(){var b=this;(navigator.clipboard?navigator.clipboard.writeText(pa):Promise.reject()).then(function(){b.textContent='Copied: '+pa},function(){b.textContent='UPI ID: '+pa})}}
+</script></body></html>
