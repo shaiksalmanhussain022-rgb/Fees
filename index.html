@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fee Manager</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f6b57"><link rel="apple-touch-icon" href="icon-192.png">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NK Academy Fee</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#222222"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root{--bg:#f4f6f5;--card:#fff;--tx:#17211e;--mu:#667570;--bd:#dbe3e0;--ac:#0f6b57;--acx:#fff;--red:#b3261e;--amb:#9a6700;--grn:#17794f}
 @media(prefers-color-scheme:dark){:root{--bg:#101614;--card:#18211e;--tx:#e6eeeb;--mu:#93a39d;--bd:#2a3833;--ac:#3fbf9f;--acx:#07130f;--red:#ff8f85;--amb:#e8b94f;--grn:#5fd69b}}
@@ -26,7 +26,7 @@ dialog{max-height:92vh;overflow:auto;border:1px solid var(--bd);border-radius:10
 label{display:block;margin:10px 0 3px;font-size:13px;color:var(--mu)}.row{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
 .empty{padding:26px;text-align:center;color:var(--mu)}small{color:var(--mu)}#pv{width:70px;height:70px;border-radius:50%;object-fit:cover;margin-top:6px;display:none}
 </style></head><body><main>
-<h1>Fee Manager</h1>
+<h1><img src="icon-192.png" alt="" style="height:38px;width:38px;border-radius:8px;vertical-align:middle;margin-right:10px">NK Academy Fee</h1>
 <div class="wa" id="wa"></div><div class="stats" id="cards"></div>
 <div class="bar"><button class="p" onclick="openForm()">Add student</button><button onclick="$('imp').showModal()">Import list</button><button onclick="openSet()">Settings</button><button onclick="backup()">Backup</button><button onclick="$('rf').click()">Restore</button><input type="file" id="rf" accept=".json" hidden onchange="restore(this.files[0])">
 <input id="q" placeholder="Search name or number" aria-label="Search" oninput="draw()"></div>
@@ -47,7 +47,11 @@ label{display:block;margin:10px 0 3px;font-size:13px;color:var(--mu)}.row{displa
 <label><input type="checkbox" id="pr" checked style="width:auto"> Open the receipt in WhatsApp (you tap Send)</label>
 <div class="row"><button onclick="this.closest('dialog').close()">Cancel</button><button class="p" onclick="savePay()">Save payment</button></div></dialog>
 
-<dialog id="qd"><h3>Send reminders one by one</h3><p id="qt"></p><small>Tap Open WhatsApp. The message appears ready to send. Tap Send in WhatsApp, come back here, and tap again for the next student.</small><div class="row"><button onclick="this.closest('dialog').close()">Close</button><button onclick="qSkip()">Skip</button><button class="p" onclick="qOpen()">Open WhatsApp</button></div></dialog>
+<dialog id="qd"><h3>Send reminders</h3><p id="qt"></p>
+<button id="qb" class="p" style="width:100%;padding:24px 12px;font-size:18px" onclick="qOpen()">Open WhatsApp</button>
+<label><input type="checkbox" id="qa" checked style="width:auto"> Open the next student automatically when I come back</label>
+<small>In WhatsApp, tap Send, then go back to this app. If your phone blocks the automatic open, tap the big button.</small><br><small id="qs"></small>
+<div class="row"><button onclick="qUndo()">I did not send the last one</button><button onclick="qSkip()">Skip</button><button onclick="qClose()">Close</button></div></dialog>
 <dialog id="imp"><h3>Import students</h3><small>One student per line: Name, Number, Monthly fee, Joining date (YYYY-MM-DD), parent (optional)<br>Example: Ravi Kumar, 9876543210, 1000, 2026-11-15, parent</small>
 <textarea id="it" rows="8"></textarea><div class="row"><button onclick="this.closest('dialog').close()">Cancel</button><button class="p" onclick="doImport()">Import</button></div></dialog>
 
@@ -68,7 +72,7 @@ const inr=n=>'₹'+Number(n).toLocaleString('en-IN');
 const dt=d=>d?new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
 /*LOCAL-START*/
 const LS='fee-manager-data';
-let DB={students:[],rcpt:0,settings:{country:'91',beforeDays:1,repeatDays:3,academy:'',phone:'',signature:'',upi:'',bank:'',cash:true}};
+let DB={students:[],rcpt:0,settings:{country:'91',beforeDays:1,repeatDays:3,academy:'NK Academy',phone:'',signature:'',upi:'',bank:'',cash:true}};
 try{const x=JSON.parse(localStorage.getItem(LS));if(x&&Array.isArray(x.students)){DB={...DB,...x};DB.settings={...DB.settings,...x.settings}}}catch{}
 function saveDB(){try{localStorage.setItem(LS,JSON.stringify(DB))}catch{alert('Phone storage is full. Export a backup and remove old photos.')}}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch{}
@@ -124,9 +128,10 @@ function route(p,q,m,b){
     DB.students.push(mk({name:c[0],phone:c[1],fee:num(c[2]),joined:c[3],who:/parent/i.test(c[4]||'')?'parent':'student'}));n++});saveDB();return{ok:true,n}}
   if(p==='/api/reset'){if(b.confirm!=='DELETE')throw new Error('Type DELETE to confirm');DB.students=[];DB.rcpt=0;saveDB();return{ok:true}}
   if(p==='/api/students'&&m==='POST'){const c=clean(b);if(!c.name)throw new Error('Name is required');DB.students.push(mk(c));saveDB();return{ok:true}}
-  const r=p.match(/^\/api\/(students|preview)\/([^/]+)(?:\/(pay|sent))?$/);if(!r)return{};
+  const r=p.match(/^\/api\/(students|preview)\/([^/]+)(?:\/(pay|sent|unsent))?$/);if(!r)return{};
   const s=f(r[2]);if(!s)return{};
   if(r[1]==='preview')return{text:msg(s),phone:s.phone};
+  if(r[3]==='unsent'){s.lastReminder=b.prev||'';s.remCount=Math.max(0,(s.remCount||0)-1);saveDB();return{ok:true}}
   if(r[3]==='sent'){s.lastReminder=today();s.remCount=(s.remCount||0)+1;saveDB();return{ok:true}}
   if(r[3]==='pay'){const a=num(b.amount);if(!a)throw new Error('Enter a valid amount');const rc='R-'+String(++DB.rcpt).padStart(4,'0'),mode=b.mode||'Cash';
     s.payments.push({date:today(),amount:a,mode,receipt:rc});saveDB();return{ok:true,receipt:rc,text:receipt(s,a,mode,rc),phone:s.phone}}
@@ -200,11 +205,19 @@ async function saveSet(p){await api('/api/settings','POST',{country:$('c1').valu
  if(p){const r=await api('/api/sample');alert(r.text);return}$('set').close();refresh()}
 async function resetAll(){if(prompt('This deletes ALL students and payments. Your settings stay and a backup is saved first. Type DELETE to continue:')!=='DELETE')return;
  const r=await api('/api/reset','POST',{confirm:'DELETE'});if(r.ok){$('set').close();alert('All students deleted. You can start fresh.');refresh()}}
-let Q=[],QI=0;
-function startQ(){Q=S.students.filter(s=>s.balance>0);QI=0;if(!Q.length)return alert('Nobody is pending.');qShow();$('qd').showModal()}
-function qShow(){const s=Q[QI];$('qt').textContent=s?`${QI+1} of ${Q.length}: ${s.name}, balance ${inr(s.balance)}`:'All done. Everyone has been handled.'}
-async function qOpen(){const s=Q[QI];if(!s)return;const p=await api('/api/preview/'+s.id);window.open(`https://wa.me/${p.phone}?text=${encodeURIComponent(p.text)}`,'_blank');await api('/api/students/'+s.id+'/sent','POST');QI++;qShow()}
+let Q=[],QI=0,QW=false,QLast=null;
+function startQ(){Q=S.students.filter(s=>s.balance>0&&(!s.lastReminder||days(s.lastReminder,today())>=S.settings.repeatDays));QI=0;QW=false;QLast=null;
+ if(!Q.length)return alert('Nobody needs a reminder now. Everyone pending was reminded recently.');qShow();$('qd').showModal()}
+function qShow(){const s=Q[QI];$('qt').textContent=s?`${QI+1} of ${Q.length}: ${s.name}, balance ${inr(s.balance)}`:'All done. Everyone has been handled.';
+ $('qb').textContent=s?'Open WhatsApp for '+s.name:'Done';$('qb').disabled=!s;$('qs').textContent=QLast?'Last opened: '+QLast.name:''}
+async function qOpen(auto){const s=Q[QI];if(!s)return;const p=await api('/api/preview/'+s.id);
+ const w=window.open('https://wa.me/'+p.phone+'?text='+encodeURIComponent(p.text),'_blank');
+ if(auto&&!w){$('qs').textContent='Your phone blocked the automatic open. Tap the big button.';return}
+ QLast={id:s.id,name:s.name,prev:s.lastReminder||''};await api('/api/students/'+s.id+'/sent','POST');QI++;QW=true;qShow();refresh()}
+async function qUndo(){if(!QLast)return;await api('/api/students/'+QLast.id+'/unsent','POST',{prev:QLast.prev});QI=Math.max(0,QI-1);QLast=null;qShow();refresh()}
 function qSkip(){QI++;qShow()}
+function qClose(){QW=false;$('qd').close()}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&QW&&$('qd').open&&$('qa').checked&&Q[QI])setTimeout(()=>{if(QW&&Q[QI]&&$('qd').open)qOpen(true)},700)});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 refresh();setInterval(async()=>{S=await api('/api/state');draw()},8000);
 </script></body></html>
